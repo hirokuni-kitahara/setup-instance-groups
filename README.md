@@ -2,21 +2,12 @@
 
 ## 1. Prepare input files
    
-Prepare input files to be setup on remote nodes.
-The following is an example structure of the input file directory.
+Prepare the following input files to be setup on remote nodes.
+The example files are inside `sample_config` directory.
 
-```
-$ tree sample_config
-sample_config/
-`-- etc
-    |-- containers
-    |   |-- policy.json
-    |   `-- registries.d
-    |       `-- ghcrio-hiro-ee.yaml
-    `-- pki
-        `-- rpm-gpg
-            `-- hiro-gpg-pub
-```
+- podman policy
+- registry config files
+- public key files
 
 ## 2. Setup files on the remote nodes
 
