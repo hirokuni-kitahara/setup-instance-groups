@@ -1,6 +1,6 @@
 # Usage
 
-1. Prepare input files
+## 1. Prepare input files
    
 Prepare input files to be setup on remote nodes.
 The following is an example structure of the input file directory.
@@ -18,23 +18,23 @@ sample_config/
             `-- hiro-gpg-pub
 ```
 
-2. Setup files on the remote nodes
+## 2. Setup files on the remote nodes
 
-- Instance Group case ( = non K8s nodes )
+### Instance Group case ( = non K8s nodes )
 
 ```
 $ ansible-playbook setup-instance-group.yml -e directory=sample_config/
 ```
 
-- Container Group case ( = K8s nodes)
+### Container Group case ( = K8s nodes)
 
 ```
 $ ansible-playbook setup-container-group.yml -e directory=sample_config/
 ```
 
-3. Validate the configuration is maintained on the nodes
+## 3. Validate the configuration is maintained on the nodes
 
-- Instance Group case ( = non K8s nodes )
+### Instance Group case ( = non K8s nodes )
 
 ```
 $ ansible-playbook check-instance-group.yml -e directory=sample_config/
@@ -48,7 +48,7 @@ fatal: [<hostmachine>]: FAILED! => {"changed": false, "msg": "some files on remo
 ```
 
 
-- Container Group case ( = K8s nodes)
+### Container Group case ( = K8s nodes)
 
 ```
 $ ansible-playbook check-container-group.yml -e directory=sample_config/
