@@ -5,9 +5,9 @@
 Prepare the following input files to be setup on remote nodes.
 The example files are inside `sample_config` directory.
 
-- podman policy
-- registry config files
-- public key files
+- podman policy (`/etc/containers/policy.json`)
+- registry config files (`/etc/containers/registries.d/xxxx.yaml`)
+- public key files (`path/to/pubkeys`)
 
 ## 2. Setup files on the remote nodes
 
