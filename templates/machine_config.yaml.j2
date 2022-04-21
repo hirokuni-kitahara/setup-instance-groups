@@ -1,0 +1,19 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: worker
+  name: 10-worker-configure-image-signature-verification
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    storage:
+      files:
+        {{ contents | to_nice_yaml(indent=2) | indent(width=8) }}
+  extensions: null
+  fips: false
+  kernelArguments: null
+  kernelType: ''
+  osImageURL: >-
+    quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:82aaff6908610fbab75883db506cd5dd3cc4b2cb4c7cfa2d80eeb3f0895bd0ad

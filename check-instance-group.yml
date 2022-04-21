@@ -1,0 +1,75 @@
+- hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: check source files
+    block:
+    - stat:
+        path: "{{ directory }}"
+      register: src_stat
+    - stat:
+        path: "{{ directory }}/etc/containers/policy.json"
+      register: policy_stat
+    - fail:
+        msg: "the source directory {{ directory }} does not exist"
+      when: not src_stat.stat.exists
+    - fail:
+        msg: "the policy json file `/etc/containers/policy.json` must exist in `{{ directory }}`"
+      when: not policy_stat.stat.exists
+    - set_fact:
+       base_dir: "{{ src_stat.stat.path | regex_replace('/$', '') }}"
+
+- hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: get files on local
+    block:
+    - set_fact:
+        files: {}
+        checksums: {}
+    - find:
+        paths: "{{ directory }}"
+        recurse: yes
+      register: files_list
+    - set_fact:
+        files: "{{ files | combine({ item.path | regex_replace('^'+base_dir, '') : lookup('file', item.path)}) }}"
+      when: not (item.path | regex_replace('^'+base_dir, '') | regex_search('/\.')) # ignore hidden files
+      loop: "{{ files_list.files | list }}"
+    - debug:
+        var: files
+    - stat:
+        path: "{{ item.path }}"
+      when: not (item.path | regex_replace('^'+base_dir, '') | regex_search('/\.'))
+      loop: "{{ files_list.files | list }}"
+      register: files_stat
+    - set_fact:
+        checksums: "{{ checksums | combine({ item.stat.path | regex_replace('^'+base_dir, '') : item.stat.checksum }) }}"
+      loop: "{{ files_stat.results }}"
+
+- hosts: instance_group_hosts
+  gather_facts: no
+  tasks:
+  - name: check files on remote
+    block:
+    - set_fact:
+        files: "{{ hostvars['localhost']['files'] }}"
+        checksums: "{{ hostvars['localhost']['checksums'] }}"
+        remote_files: {}
+        all_files_ok: yes
+        diffs: []
+    - become: true
+      stat:
+        path: "{{ item.key }}"
+      loop: "{{ files | dict2items }}"
+      register: remote_files_stat
+    - debug:
+        var: remote_files_stat
+    - set_fact:
+        diffs: "{{ diffs + [ item.stat.path ] }}"
+        all_files_ok: no
+      when: item.stat.checksum != checksums[item.stat.path]
+      loop: "{{ remote_files_stat.results }}"
+    - fail: 
+        msg: "some files on remote are not identical to the corresponding local files. the differrent files are: {{ diffs | to_json }}"
+      when: not all_files_ok
+    - debug:
+        msg: "all files keep the desired state."

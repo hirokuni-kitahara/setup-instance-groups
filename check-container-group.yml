@@ -1,0 +1,83 @@
+- hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: check source files
+    block:
+    - stat:
+        path: "{{ directory }}"
+      register: src_stat
+    - stat:
+        path: "{{ directory }}/etc/containers/policy.json"
+      register: policy_stat
+    - fail:
+        msg: "the source directory {{ directory }} does not exist"
+      when: not src_stat.stat.exists
+    - fail:
+        msg: "the policy json file `/etc/containers/policy.json` must exist in `{{ directory }}`"
+      when: not policy_stat.stat.exists
+    - set_fact:
+       base_dir: "{{ src_stat.stat.path | regex_replace('/$', '') }}"
+
+- hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: check k8s cluster
+    block:
+    - kubernetes.core.k8s_cluster_info:
+      register: k8s_api_status
+    - kubernetes.core.k8s_info:
+        api_version: machineconfiguration.openshift.io/v1
+        kind: MachineConfig
+      register: machine_config_list
+    - debug:
+        var: machine_config_list
+
+- hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: load files
+    block:
+    - set_fact:
+        files: {}
+    - find:
+        paths: "{{ directory }}"
+        recurse: yes
+      register: files_list
+    - set_fact:
+        files: "{{ files | combine({ item.path | regex_replace('^'+base_dir, '') : lookup('file', item.path)}) }}"
+      when: not (item.path | regex_replace('^'+base_dir, '') | regex_search('/\.')) # ignore hidden files
+      loop: "{{ files_list.files | list }}"
+    - set_fact:
+        file_contents: []
+    - set_fact:
+        file_contents: "{{ file_contents + [ lookup('template', 'templates/single_item.yaml.j2', template_vars={'path': item.key, 'content': item.value}) | from_yaml ] }}"
+      loop: "{{ files | dict2items }}"
+    - set_fact:
+        machine_config_yaml: "{{ lookup('template', 'templates/machine_config.yaml.j2', template_vars={'contents': file_contents }) }}"
+    - debug:
+        var: machine_config_yaml
+    - kubernetes.core.k8s_info:
+        api_version: machineconfiguration.openshift.io/v1
+        kind: MachineConfig
+        name:  "{{ (machine_config_yaml | from_yaml).metadata.name }}"
+      register: remote_machine_config
+    - set_fact:
+        local_config_hash: "{{ (machine_config_yaml | from_yaml).spec.config.storage | to_json | hash('sha1') }}"
+        remote_config_hash: "{{ remote_machine_config.resources[0].spec.config.storage | to_json | hash('sha1') }}"
+    - fail:
+        msg: "MachineConfig configuration on the cluster is different from the current files on local"
+      when: local_config_hash != remote_config_hash
+    - kubernetes.core.k8s_info:
+        api_version: machineconfiguration.openshift.io/v1
+        kind: MachineConfigPool
+        name:  worker
+      register: remote_machine_config_pool
+    - set_fact:
+        machine_count: "{{ remote_machine_config_pool.resources[0].status.machineCount }}"
+        ready_machine_count: "{{ remote_machine_config_pool.resources[0].status.readyMachineCount }}"
+    - fail:
+        msg: "MachineConfigPool indicates that some nodes are not ready now [ {{ machine_count - ready_machine_count }} / {{ machine_count }} ]"
+      when: machine_count != ready_machine_count
+    - debug:
+        msg: "MachineConfig keeps the desired state and all nodes are ready"
+

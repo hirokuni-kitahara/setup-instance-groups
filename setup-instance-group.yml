@@ -1,0 +1,29 @@
+- hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: check source files
+    block:
+    - stat:
+        path: "{{ directory }}"
+      register: src_stat
+    - stat:
+        path: "{{ directory }}/etc/containers/policy.json"
+      register: policy_stat
+    - fail:
+        msg: "the source directory {{ directory }} does not exist"
+      when: not src_stat.stat.exists
+    - fail:
+        msg: "the policy json file `/etc/containers/policy.json` must exist in `{{ directory }}`"
+      when: not policy_stat.stat.exists
+
+- hosts: instance_group_hosts
+  gather_facts: no
+  tasks:
+  - name: copy config files
+    become: true
+    copy:
+      src: "{{ directory }}/etc"
+      dest: /
+      owner: root
+      group: root
+      

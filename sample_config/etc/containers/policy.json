@@ -1,0 +1,24 @@
+{
+    "default": [
+        {
+            "type": "insecureAcceptAnything"
+        }
+    ],
+    "transports":
+        {
+            "docker":
+                {
+                    "ghcr.io/hirokuni-kitahara/awx-ee": [
+                        {
+                            "type": "signedBy",
+                            "keyType": "GPGKeys",
+                            "keyPath": "/etc/pki/rpm-gpg/hiro-gpg-pub"
+                        }
+                    ]
+                },
+            "docker-daemon":
+                {
+                    "": [{"type":"insecureAcceptAnything"}]
+                }
+        }
+}

@@ -1,0 +1,4 @@
+docker:
+  ghcr.io/hirokuni-kitahara:
+    sigstore: http://ec2-18-222-134-159.us-east-2.compute.amazonaws.com:8192
+    sigstore-staging: file:///var/lib/containers/sigstore
